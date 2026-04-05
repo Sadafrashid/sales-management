@@ -118,7 +118,32 @@ elif choice == "New Sale":
             st.toast("Added!")
 
         if st.session_state.cart:
-            st.table(pd.DataFrame(st.session_state.cart))
+            st.subheader("Current Cart")
+            
+            # Create a header row for the cart
+            h_cols = st.columns([1, 2, 1, 1, 1])
+            h_cols[0].write("**Code**")
+            h_cols[1].write("**Name**")
+            h_cols[2].write("**Qty**")
+            h_cols[3].write("**Total (inc. GST)**")
+            h_cols[4].write("**Action**")
+
+            # Iterate through cart with index to allow deletion
+            for idx, item in enumerate(st.session_state.cart):
+                cols = st.columns([1, 2, 1, 1, 1])
+                cols[0].write(item["code"])
+                cols[1].write(item["name"])
+                cols[2].write(str(item["qty"]))
+                cols[3].write(f"₹{item['total']:.2f}")
+                
+                # Delete button for each specific row
+                if cols[4].button("❌", key=f"del_{idx}"):
+                    st.session_state.cart.pop(idx)
+                    st.rerun()
+
+            st.divider()
+            
+            # Checkout Section
             if st.button("Finish & Download Invoice", type="primary", width='stretch'):
                 inv_id = f"F-{datetime.now().strftime('%H%M%S')}"
                 date_s = datetime.now().strftime("%d %b %Y")
@@ -132,9 +157,12 @@ elif choice == "New Sale":
                 
                 path = create_pdf(inv_id, date_s, c_sel, pdf_data)
                 with open(path, "rb") as f:
-                    st.download_button("📥 Download PDF", f, file_name=f"{inv_id}.pdf", width='stretch')
+                    st.download_button("📥 Download PDF", f, file_name=f"{inv_id}.pdf")
+                
+                # Clear cart and refresh
                 st.session_state.cart = []
-
+                st.success("Sale completed successfully!")
+                
 # --- Dashboard & Logs ---
 # --- Dashboard & Analytics ---
 elif choice == "Dashboard":
@@ -181,3 +209,17 @@ elif choice == "Dashboard":
                 st.success("All items are well-stocked!")
     else:
         st.info("No sales data available yet to generate insights.")
+        
+# --- Logs (Add this at the end of app.py) ---
+elif choice == "Logs":
+    st.title("📜 System Logs")
+    if st.session_state.user_role == "Admin":
+        logs = get_logs()
+        if logs:
+            log_df = pd.DataFrame(logs, columns=["ID", "Timestamp", "User", "Action", "Details"])
+            # Updated with the new width parameter
+            st.dataframe(log_df, width='stretch') 
+        else:
+            st.info("No logs found.")
+    else:
+        st.error("Access Denied: Admins only.")
